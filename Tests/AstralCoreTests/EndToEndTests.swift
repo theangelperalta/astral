@@ -82,6 +82,35 @@ final class EndToEndTests: XCTestCase {
                        "Colliding typealias ids should dedup to one node (first wins)")
     }
 
+    func testDeterministicModeOmitsTimestampAndIsByteStable() throws {
+        let inputURL = try TestSupport.fixture("MultiModule")
+        let moduleURLs = try ["MultiModule/ModuleA", "MultiModule/ModuleB"]
+            .map { try TestSupport.fixture($0) }
+        let config = Pipeline.Configuration(
+            inputRoots: [inputURL],
+            moduleRoots: moduleURLs,
+            deterministic: true
+        )
+
+        let first = try Pipeline().run(config)
+        XCTAssertNil(first.metadata.generatedAt,
+                     "Deterministic mode must omit the generation timestamp")
+
+        // Two independent runs over identical inputs must render byte-identical JSON.
+        let exporter = JSONExporter()
+        let firstData = try exporter.render(first)
+        let secondData = try exporter.render(try Pipeline().run(config))
+        XCTAssertEqual(firstData, secondData)
+        XCTAssertFalse(String(decoding: firstData, as: UTF8.self).contains("generatedAt"),
+                       "generatedAt key should not appear when nil")
+    }
+
+    func testNonDeterministicModeRecordsTimestamp() throws {
+        let graph = try runPipeline(on: "SimpleProtocol")
+        XCTAssertNotNil(graph.metadata.generatedAt,
+                        "Default mode should record a generation timestamp")
+    }
+
     func testEndToEndExportsAllFormatsToDisk() throws {
         let graph = try runPipeline(
             on: "MultiModule",

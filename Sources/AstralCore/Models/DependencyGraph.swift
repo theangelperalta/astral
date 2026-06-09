@@ -8,12 +8,15 @@ public struct DependencyGraph: Codable, Sendable {
 
     public struct Metadata: Codable, Sendable {
         public let astralVersion: String
-        public let generatedAt: Date
+        /// Generation timestamp. `nil` when the graph was produced in
+        /// deterministic mode, in which case it is omitted from output so
+        /// repeated runs over identical inputs yield byte-identical results.
+        public let generatedAt: Date?
         public let inputRoots: [String]
         public let moduleNames: [String]
 
         public init(astralVersion: String,
-                    generatedAt: Date,
+                    generatedAt: Date?,
                     inputRoots: [String],
                     moduleNames: [String]) {
             self.astralVersion = astralVersion

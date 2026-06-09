@@ -40,6 +40,9 @@ struct Graph: AsyncParsableCommand {
     @Flag(name: .long, help: "Emit edges to known stdlib/Foundation types.")
     var includeStdlibRefs: Bool = false
 
+    @Flag(name: .long, help: "Omit the generation timestamp for reproducible output.")
+    var deterministic: Bool = false
+
     @Flag(name: .long) var quiet: Bool = false
     @Flag(name: .long) var verbose: Bool = false
 
@@ -57,7 +60,8 @@ struct Graph: AsyncParsableCommand {
             inputRoots: input.map { URL(fileURLWithPath: $0) },
             moduleRoots: moduleRoots.map { URL(fileURLWithPath: $0) },
             excludeGlobs: exclude,
-            includeStdlibRefs: includeStdlibRefs
+            includeStdlibRefs: includeStdlibRefs,
+            deterministic: deterministic
         )
         let pipeline = Pipeline()
         let graph = try pipeline.run(config)

@@ -61,6 +61,7 @@ Options:
 | `--module-roots` | Override module roots (each path becomes one module). | inferred |
 | `--exclude` | Glob patterns to exclude. | none |
 | `--include-stdlib-refs` | Emit edges to known stdlib/Foundation types. | off |
+| `--deterministic` | Omit the generation timestamp for byte-reproducible output (CI-friendly). | off |
 | `--quiet` | Suppress the summary written to stderr. | off |
 | `--verbose` | Verbose output. | off |
 
@@ -119,7 +120,9 @@ independently of the CLI.
 `Pipeline.run(_:)` composes the stages end to end:
 
 1. **Discover** source files under the input roots (applying excludes).
-2. **Parse** each file with SwiftParser and assign it a module.
+2. **Parse** each file with SwiftParser and assign it a module. Files are parsed
+   in parallel (parsing is the dominant cost), with results reassembled in source
+   order so output is unaffected.
 3. **Collect** type declarations and type-usage edges from each file's syntax tree.
 4. **Resolve** references against a symbol table using per-file imports.
 5. **Assemble** the `DependencyGraph`, which can then be exported.

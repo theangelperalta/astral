@@ -13,15 +13,20 @@ public struct Pipeline {
         public var moduleRoots: [URL]
         public var excludeGlobs: [String]
         public var includeStdlibRefs: Bool
+        /// When true, omit the generation timestamp so repeated runs over
+        /// identical inputs produce byte-identical output.
+        public var deterministic: Bool
 
         public init(inputRoots: [URL],
                     moduleRoots: [URL] = [],
                     excludeGlobs: [String] = [],
-                    includeStdlibRefs: Bool = false) {
+                    includeStdlibRefs: Bool = false,
+                    deterministic: Bool = false) {
             self.inputRoots = inputRoots
             self.moduleRoots = moduleRoots
             self.excludeGlobs = excludeGlobs
             self.includeStdlibRefs = includeStdlibRefs
+            self.deterministic = deterministic
         }
     }
 
@@ -34,11 +39,10 @@ public struct Pipeline {
                                   explicitModuleRoots: config.moduleRoots)
         let parser = SourceFileParser()
 
-        var parsedFiles: [ParsedFile] = []
-        parsedFiles.reserveCapacity(files.count)
-        for file in files {
-            let module = layout.moduleName(for: file)
-            parsedFiles.append(try parser.parse(file, module: module))
+        // Parsing is the expensive stage and each file is independent, so parse
+        // in parallel. `parallelMap` preserves source order in the result.
+        let parsedFiles = try parallelMap(files) { file in
+            try parser.parse(file, module: layout.moduleName(for: file))
         }
 
         var declarations: [TypeDeclaration] = []
@@ -64,7 +68,7 @@ public struct Pipeline {
                                    uniquingKeysWith: { first, _ in first })
         let metadata = DependencyGraph.Metadata(
             astralVersion: AstralVersion.current,
-            generatedAt: Date(),
+            generatedAt: config.deterministic ? nil : Date(),
             inputRoots: config.inputRoots.map { $0.path },
             moduleNames: moduleNames.sorted()
         )

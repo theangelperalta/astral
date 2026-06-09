@@ -39,10 +39,15 @@ extension TypeUsageCollector {
     func appendEdge(ownerId: TypeDeclaration.ID,
                     ref: TypeReference,
                     kind: DependencyEdgeKind) {
+        let condition = conditionStack.last
         let edge = DependencyEdge(
+            id: DependencyEdge.deterministicID(
+                fromId: ownerId, to: ref.rawText, kind: kind,
+                location: ref.location, condition: condition
+            ),
             fromId: ownerId, to: ref, resolvedToIds: [],
             kind: kind, location: ref.location,
-            condition: conditionStack.last
+            condition: condition
         )
         edges.append(edge)
     }
