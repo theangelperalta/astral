@@ -127,6 +127,34 @@ independently of the CLI.
 4. **Resolve** references against a symbol table using per-file imports.
 5. **Assemble** the `DependencyGraph`, which can then be exported.
 
+## Limitations
+
+Astral performs purely **syntactic, name-based** analysis — it never invokes the
+Swift type checker or builds the code. This keeps it fast and build-free, but means
+the graph is an *approximation*. Be aware of the following:
+
+- **No type inference.** Only types that are spelled out in the source become edges.
+  Inferred types (`let x = makeThing()`, closures, operator results, etc.) contribute
+  nothing, so the graph systematically *under-counts* real dependencies.
+- **Ambiguous resolution.** Resolution is lexical. A bare reference like `Foo` that
+  matches several declarations across modules (after the same-module and import tiers
+  fail) resolves to *all* candidates. Precision therefore degrades on large codebases
+  with repeated simple names. Unresolvable references are reported in
+  `unresolvedReferences` rather than dropped.
+- **Hardcoded standard-library list.** External types are recognized via a fixed
+  allowlist (`KnownExternalTypes`). Stdlib/Foundation/third-party types not on that
+  list surface as unresolved references. Use `--include-stdlib-refs` to keep known
+  ones as edges.
+- **No macro or conditional-compilation expansion.** Macros are not expanded. Code in
+  every `#if` branch is analyzed (with the branch condition recorded on each edge);
+  Astral does not pick a single active configuration.
+- **Module inference is heuristic.** Module names are derived from directory layout
+  unless you pass `--module-roots`; they won't necessarily match your actual SwiftPM /
+  Xcode target boundaries.
+
+In short: Astral is best for fast, approximate architecture overviews and visual
+exploration — not for exhaustive or guaranteed-correct dependency facts.
+
 ## Dependencies
 
 - [swift-syntax](https://github.com/swiftlang/swift-syntax) — parsing.
